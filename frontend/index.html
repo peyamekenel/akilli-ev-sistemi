@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akıllı Ev Kontrol Paneli</title>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sensor-card {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .sensor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .system-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .status-active {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .status-inactive {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+            color: #6c757d;
+        }
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .status-details {
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .rules-table {
+            margin-top: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .rules-table table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .rules-table th {
+            background: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function SensorCard({ title, value, unit, icon, status }) {
+            return (
+                <div className="col-md-4">
+                    <div className="card sensor-card">
+                        <div className="card-body">
+                            <h5 className="card-title">{title}</h5>
+                            <p className="card-text display-4">{value}{unit}</p>
+                            <p className="text-muted">{status}</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function SystemStatus({ systems }) {
+            return (
+                <div className="col-12 mt-4">
+                    <h4 className="mb-4">Sistem Durumları</h4>
+                    <div className="row">
+                        {Object.entries(systems).map(([key, system]) => (
+                            <div key={key} className="col-md-4 mb-3">
+                                <div className={`system-status ${system.active ? 'status-active' : 'status-inactive'}`}>
+                                    <div className="text-center">
+                                        <i className={`status-icon fas ${system.icon}`}></i>
+                                        <h5>{system.name}</h5>
+                                        <div className="status-details">
+                                            <strong>Durum: </strong>
+                                            {system.active ? 'Aktif' : 'Pasif'}
+                                        </div>
+                                        {system.details && (
+                                            <div className="status-details">
+                                                <strong>Detay: </strong>
+                                                {system.details}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function RulesTable() {
+            const rules = [
+                {
+                    sensor: "Sıcaklık",
+                    condition: "< 20°C veya > 25°C",
+                    action: "HVAC sistemi devreye girer",
+                    threshold: "20-25°C arası ideal"
+                },
+                {
+                    sensor: "Nem",
+                    condition: "< 30% veya > 70%",
+                    action: "Nem kontrolü aktif edilir",
+                    threshold: "30-70% arası ideal"
+                },
+                {
+                    sensor: "Hava Kalitesi",
+                    condition: "< 90 AQI",
+                    action: "Havalandırma sistemi çalıştırılır",
+                    threshold: "90+ AQI ideal"
+                },
+                {
+                    sensor: "Kapı Durumu",
+                    condition: "Açık",
+                    action: "Güvenlik sistemi uyarısı",
+                    threshold: "Kapalı olmalı"
+                },
+                {
+                    sensor: "Varlık Durumu",
+                    condition: "Varlık yok",
+                    action: "Enerji tasarrufu modu",
+                    threshold: "Hareket algılandığında"
+                }
+            ];
+
+            return (
+                <div className="col-12">
+                    <div className="rules-table">
+                        <h4 className="mb-4">AI Karar Kuralları</h4>
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Sensör</th>
+                                    <th>Koşul</th>
+                                    <th>Aksiyon</th>
+                                    <th>Eşik Değer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rules.map((rule, index) => (
+                                    <tr key={index}>
+                                        <td>{rule.sensor}</td>
+                                        <td>{rule.condition}</td>
+                                        <td>{rule.action}</td>
+                                        <td>{rule.threshold}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [sensorData, setSensorData] = React.useState({
+                temperature: 22.5,
+                humidity: 45,
+                doorStatus: false,
+                airQuality: 95,
+                presence: true
+            });
+
+            const [systemStates, setSystemStates] = React.useState({
+                ventilation: {
+                    name: 'Havalandırma Sistemi',
+                    active: false,
+                    icon: 'fa-wind',
+                    details: null
+                },
+                hvac: {
+                    name: 'HVAC Sistemi',
+                    active: false,
+                    icon: 'fa-temperature-half',
+                    details: null
+                },
+                lighting: {
+                    name: 'Aydınlatma Sistemi',
+                    active: true,
+                    icon: 'fa-lightbulb',
+                    details: 'Otomatik mod'
+                },
+                security: {
+                    name: 'Güvenlik Sistemi',
+                    active: true,
+                    icon: 'fa-shield-alt',
+                    details: 'Kapı izleniyor'
+                },
+                energySaving: {
+                    name: 'Enerji Tasarrufu',
+                    active: false,
+                    icon: 'fa-leaf',
+                    details: null
+                }
+            });
+
+            // Simulate sensor updates and system states
+            React.useEffect(() => {
+                const interval = setInterval(() => {
+                    setSensorData(prev => {
+                        const newTemp = prev.temperature + (Math.random() - 0.5);
+                        const newHumidity = Math.max(30, Math.min(70, prev.humidity + (Math.random() - 0.5) * 2));
+                        const newAirQuality = Math.max(0, Math.min(100, prev.airQuality + (Math.random() - 0.5) * 2));
+                        const newDoorStatus = Math.random() > 0.9 ? !prev.doorStatus : prev.doorStatus;
+                        const newPresence = Math.random() > 0.95 ? !prev.presence : prev.presence;
+
+                        // Update system states based on sensor data
+                        setSystemStates(prevSystems => ({
+                            ...prevSystems,
+                            ventilation: {
+                                ...prevSystems.ventilation,
+                                active: newAirQuality < 90,
+                                details: newAirQuality < 90 ? 'Hava kalitesi iyileştiriliyor' : null
+                            },
+                            hvac: {
+                                ...prevSystems.hvac,
+                                active: newTemp > 25 || newTemp < 20,
+                                details: newTemp > 25 ? 'Soğutma aktif' : newTemp < 20 ? 'Isıtma aktif' : null
+                            },
+                            security: {
+                                ...prevSystems.security,
+                                active: true,
+                                details: newDoorStatus ? 'Dikkat: Kapı açık' : 'Kapı güvenli'
+                            },
+                            lighting: {
+                                ...prevSystems.lighting,
+                                active: newPresence,
+                                details: newPresence ? 'Hareket algılandı' : 'Otomatik mod'
+                            },
+                            energySaving: {
+                                ...prevSystems.energySaving,
+                                active: !newPresence,
+                                details: !newPresence ? 'Enerji tasarrufu aktif' : null
+                            }
+                        }));
+
+                        return {
+                            temperature: newTemp,
+                            humidity: newHumidity,
+                            doorStatus: newDoorStatus,
+                            airQuality: newAirQuality,
+                            presence: newPresence
+                        };
+                    });
+                }, 2000);
+
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="container mt-4">
+                    <h1 className="text-center mb-4">Akıllı Ev Kontrol Paneli</h1>
+                    <div className="row">
+                        <div className="col-md-8">
+                            <div className="row">
+                                <SensorCard
+                                    title="Sıcaklık"
+                                    value={sensorData.temperature.toFixed(1)}
+                                    unit="°C"
+                                    status="Normal aralıkta"
+                                />
+                                <SensorCard
+                                    title="Nem"
+                                    value={sensorData.humidity.toFixed(1)}
+                                    unit="%"
+                                    status="İdeal seviyede"
+                                />
+                                <SensorCard
+                                    title="Kapı Durumu"
+                                    value={sensorData.doorStatus ? "Açık" : "Kapalı"}
+                                    unit=""
+                                    status={sensorData.doorStatus ? "Dikkat: Kapı açık" : "Güvenli"}
+                                />
+                                <SensorCard
+                                    title="Hava Kalitesi"
+                                    value={sensorData.airQuality.toFixed(1)}
+                                    unit=" AQI"
+                                    status={sensorData.airQuality > 50 ? "İyileştirme gerekli" : "İyi"}
+                                />
+                                <SensorCard
+                                    title="Varlık Durumu"
+                                    value={sensorData.presence ? "Var" : "Yok"}
+                                    unit=""
+                                    status={sensorData.presence ? "Ev dolu" : "Ev boş"}
+                                />
+                            </div>
+                        </div>
+                        <div className="col-md-4">
+                            <RulesTable />
+                        </div>
+                    </div>
+                    <SystemStatus systems={systemStates} />
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
